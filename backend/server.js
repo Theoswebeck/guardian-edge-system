@@ -150,10 +150,10 @@ app.post('/api/admin/change-password', authenticateToken, async (req, res) => {
 });
 
 // --- DEVICES ---
-app.post('/api/devices', authenticateToken, upload.single('birthCertificate'), async (req, res) => {
+app.post('/api/devices', authenticateToken, async (req, res) => {
   try {
     const { name, childDOB } = req.body;
-    if (!name || !childDOB || !req.file) return res.status(400).json({ error: 'Missing fields' });
+    if (!name || !childDOB) return res.status(400).json({ error: 'Missing fields' });
     
     // Age check
     const birthDate = new Date(childDOB);
@@ -164,7 +164,7 @@ app.post('/api/devices', authenticateToken, upload.single('birthCertificate'), a
     if (age >= 18) return res.status(400).json({ error: 'Child must be under 18' });
 
     const newDevice = await db.addDevice({
-      name, childDOB, birthCertificate: req.file.path, parentId: req.user.id
+      name, childDOB, birthCertificate: 'removed', parentId: req.user.id
     });
     res.status(201).json(newDevice);
   } catch (err) {
