@@ -1,0 +1,9 @@
+node_modules/
+.expo/
+uploads/
+backend/db.json
+backend/db.json.tmp
+*.apk
+*.log
+.env
+__pycache__/

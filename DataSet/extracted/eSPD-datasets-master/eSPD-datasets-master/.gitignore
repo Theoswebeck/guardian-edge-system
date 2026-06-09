@@ -1,0 +1,11 @@
+__pycache__
+*.idea
+handle_data.py
+todo
+*.sublime*
+*.csv
+datapack*.json
+*/raw_dataset/*
+*/statistics/*
+*.xml
+pan12*.txt
