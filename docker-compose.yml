@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5050:5050"
+    environment:
+      - PORT=5050
+      - DATABASE_URL=postgresql://guardian_edge_db_user:X6XXAnIzs00huVTUQmSeSHiw2tKex7wv@dpg-d8k1tlrjdbms739uv40g-a.oregon-postgres.render.com/guardian_edge_db
+      - JWT_SECRET=super_secret_child_protection_key_2026
+      # Add Cloudinary keys here if needed for image uploads
+      # - CLOUDINARY_CLOUD_NAME=your_name
+      # - CLOUDINARY_API_KEY=your_key
+      # - CLOUDINARY_API_SECRET=your_secret

@@ -1,0 +1,479 @@
+================================================================================
+        AI-DRIVEN CHILD ONLINE PROTECTION SYSTEM
+              COMPLETE USER & MIGRATION GUIDE
+================================================================================
+  Project:   GuardianEdge - AI-Driven Child Online Protection System
+  Version:   1.0
+  Author:    Benson
+  Date:      June 2026
+================================================================================
+
+TABLE OF CONTENTS
+-----------------
+  1.  System Overview
+  2.  System Architecture
+  3.  Prerequisites (Software You Must Install)
+  4.  PART A: Migrating to a New Laptop (Step-by-Step)
+  5.  PART B: First-Time Setup on New Laptop
+  6.  PART C: Running the System Every Day
+  7.  PART D: Running the Admin Dashboard
+  8.  PART E: Running the Parent Mobile App
+  9.  PART F: Stopping the System
+  10. Online Database (Render) Information
+  11. Default Admin Credentials
+  12. Troubleshooting Common Errors
+  13. Project Folder Structure
+
+
+================================================================================
+1. SYSTEM OVERVIEW
+================================================================================
+
+GuardianEdge is an AI-powered system designed to protect children from online
+threats such as grooming and predatory behaviour. The system consists of:
+
+  [A] Backend API Server    - Node.js server that handles all data and AI logic
+  [B] Admin Dashboard       - Web interface for the administrator to manage
+                              parent accounts, devices, and view threat alerts
+  [C] Parent App            - Mobile app (React Native/Expo) for parents to
+                              register, pair devices, and receive alerts
+  [D] Child App             - Android app installed on the child's device that
+                              monitors messages using an Accessibility Service
+  [E] AI Threat Model       - Python/TensorFlow model that analyses messages
+                              and predicts grooming/predatory content
+  [F] Online Database       - PostgreSQL database hosted on Render.com that
+                              stores all users, devices, alerts, and logs
+
+
+================================================================================
+2. SYSTEM ARCHITECTURE
+================================================================================
+
+  Child's Phone (Android)
+        │
+        │  Sends flagged messages via REST API
+        ▼
+  Backend API (Node.js - Port 5050)  ◄──── Admin Dashboard (Port 8081)
+        │                                         │
+        │  Stores data                            │  Reads data (JWT Auth)
+        ▼                                         │
+  PostgreSQL Database (Render.com) ◄─────────────┘
+        │
+        │  Sends alerts
+        ▼
+  Parent App (Expo - Mobile)
+
+
+================================================================================
+3. PREREQUISITES (SOFTWARE YOU MUST INSTALL ON THE NEW LAPTOP)
+================================================================================
+
+Install the following software BEFORE migrating the project:
+
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │  SOFTWARE          │  VERSION      │  DOWNLOAD LINK                     │
+  ├────────────────────┼───────────────┼────────────────────────────────────┤
+  │  Git               │  Latest       │  https://git-scm.com/downloads     │
+  │  Node.js           │  v18 or above │  https://nodejs.org                │
+  │  Docker Desktop    │  Latest       │  https://www.docker.com/products/  │
+  │                    │               │  docker-desktop                    │
+  │  Python            │  3.9+         │  https://www.python.org/downloads  │
+  │  Expo CLI          │  Latest       │  (installed via npm, see below)    │
+  │  Android Studio    │  Latest       │  https://developer.android.com/    │
+  │  (for Child App)   │               │  studio (optional, for Android)    │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+  After installing Node.js, open PowerShell and run:
+      npm install -g expo-cli
+
+  Verify all installations by running:
+      git --version
+      node --version
+      docker --version
+      python --version
+
+
+================================================================================
+4. PART A: MIGRATING THE PROJECT TO A NEW LAPTOP
+================================================================================
+
+You have TWO options to transfer the project. Choose Option 1 if you use GitHub,
+or Option 2 if you want to manually copy the files.
+
+────────────────────────────────────────────────────────────────────────────────
+OPTION 1: MIGRATE VIA GITHUB (RECOMMENDED)
+────────────────────────────────────────────────────────────────────────────────
+
+  STEP 1 — Push to GitHub (Do this on YOUR CURRENT LAPTOP):
+  ----------------------------------------------------------
+  a) Open PowerShell and navigate to the project root:
+         cd "e:\Java Project\UK Project\2026\Benson\AI-DRIVEN CHILD ONLINE PROTECTION SYSTEM"
+
+  b) Check if the project is already linked to GitHub:
+         git remote -v
+
+  c) If NOT linked, create a repository on https://github.com and then run:
+         git remote add origin https://github.com/YOUR_USERNAME/guardian-edge-system.git
+
+  d) Push all files:
+         git add .
+         git commit -m "Full project backup before migration"
+         git push origin main
+
+  STEP 2 — Clone on the NEW LAPTOP:
+  ----------------------------------
+  a) Open PowerShell on the new laptop and navigate to where you want the project:
+         cd "C:\Users\YourName\Documents"
+
+  b) Clone the repository:
+         git clone https://github.com/YOUR_USERNAME/guardian-edge-system.git
+
+  c) Navigate into the project folder:
+         cd guardian-edge-system
+
+────────────────────────────────────────────────────────────────────────────────
+OPTION 2: MIGRATE VIA USB / EXTERNAL DRIVE (MANUAL COPY)
+────────────────────────────────────────────────────────────────────────────────
+
+  STEP 1 — Copy the project (On YOUR CURRENT LAPTOP):
+  ----------------------------------------------------
+  a) Navigate to:
+         e:\Java Project\UK Project\2026\Benson\
+
+  b) Copy the entire folder:
+         "AI-DRIVEN CHILD ONLINE PROTECTION SYSTEM"
+
+  c) IMPORTANT - DO NOT copy these large folders (they can be reinstalled):
+         - backend\node_modules\
+         - dashboard\node_modules\
+         - parent-app\node_modules\
+         - child-app\node_modules\
+
+     To save space, delete these folders BEFORE copying to your USB drive.
+     You can delete them by running in PowerShell:
+         Remove-Item -Recurse -Force "backend\node_modules"
+         Remove-Item -Recurse -Force "dashboard\node_modules"
+         Remove-Item -Recurse -Force "parent-app\node_modules"
+         Remove-Item -Recurse -Force "child-app\node_modules"
+
+  STEP 2 — Paste on the NEW LAPTOP:
+  ----------------------------------
+  a) Copy the folder from your USB drive to your new laptop, for example:
+         C:\Projects\AI-DRIVEN CHILD ONLINE PROTECTION SYSTEM\
+
+  b) Open PowerShell and navigate there:
+         cd "C:\Projects\AI-DRIVEN CHILD ONLINE PROTECTION SYSTEM"
+
+
+================================================================================
+5. PART B: FIRST-TIME SETUP ON THE NEW LAPTOP
+================================================================================
+
+After getting the project files on the new laptop, follow these steps IN ORDER:
+
+  ──────────────────────────────────────────────────────────────
+  STEP 1: Install Backend Dependencies
+  ──────────────────────────────────────────────────────────────
+  In PowerShell, navigate to the backend folder:
+      cd backend
+      npm install
+      cd ..
+
+  ──────────────────────────────────────────────────────────────
+  STEP 2: Install Dashboard Dependencies
+  ──────────────────────────────────────────────────────────────
+      cd dashboard
+      npm install
+      cd ..
+
+  ──────────────────────────────────────────────────────────────
+  STEP 3: Install Parent App Dependencies
+  ──────────────────────────────────────────────────────────────
+      cd parent-app
+      npm install
+      cd ..
+
+  ──────────────────────────────────────────────────────────────
+  STEP 4: Install Child App Dependencies (Optional)
+  ──────────────────────────────────────────────────────────────
+      cd child-app
+      npm install
+      cd ..
+
+  ──────────────────────────────────────────────────────────────
+  STEP 5: Verify Docker is Running
+  ──────────────────────────────────────────────────────────────
+  Open Docker Desktop application and wait until it says "Docker Desktop
+  is running" in the system tray.
+
+  ──────────────────────────────────────────────────────────────
+  STEP 6: Check Docker Compose File
+  ──────────────────────────────────────────────────────────────
+  Open the file: docker-compose.yml
+
+  Make sure the DATABASE_URL line contains your Render database URL:
+
+      - DATABASE_URL=postgresql://guardian_edge_db_user:X6XXAnIzs00huVTUQmSeSHiw2tKex7wv@dpg-d8k1tlrjdbms739uv40g-a.oregon-postgres.render.com/guardian_edge_db
+
+  If you need to find the URL again, log in to https://dashboard.render.com,
+  click on "guardian-edge-db", and copy the "External Database URL".
+
+  ──────────────────────────────────────────────────────────────
+  STEP 7: First Docker Build (Takes 5-10 minutes FIRST TIME ONLY)
+  ──────────────────────────────────────────────────────────────
+  In the project root directory, run:
+      docker compose up --build
+
+  This will download all required images and install Python/TensorFlow.
+  This only takes a long time on the FIRST run. All future runs are instant.
+
+  You will know it is ready when you see:
+      backend-1  | Server running on port 5050
+      backend-1  | Database tables initialized.
+
+
+================================================================================
+6. PART C: RUNNING THE SYSTEM EVERY DAY
+================================================================================
+
+Every time you want to use the system, follow these steps:
+
+  ──────────────────────────────────────────────────────────────
+  PREREQUISITE: Open Docker Desktop first and wait for it to start.
+  ──────────────────────────────────────────────────────────────
+
+  TERMINAL 1 — Start the Backend Server:
+  ----------------------------------------
+  Open PowerShell and navigate to the project root, then run:
+
+      docker compose up
+
+  Wait for:
+      backend-1  | Server running on port 5050
+
+  The backend API will be available at: http://localhost:5050
+
+  NOTE: Only use "docker compose up --build" when you have made changes to
+        server.js, db.js, infer.py, or the Dockerfile. For normal daily use,
+        just use "docker compose up".
+
+
+================================================================================
+7. PART D: RUNNING THE ADMIN DASHBOARD
+================================================================================
+
+  TERMINAL 2 — Start the Admin Dashboard:
+  ----------------------------------------
+  Open a NEW PowerShell window and run:
+
+      cd "PATH_TO_YOUR_PROJECT\dashboard"
+      npm run web
+
+  The dashboard will open automatically in your browser at:
+      http://localhost:8081
+
+  ADMIN LOGIN CREDENTIALS:
+      Username:  admin
+      Password:  admin123
+
+  DASHBOARD FEATURES:
+      🏠 Overview    - View total parents, devices, alerts statistics
+      👨‍👩‍👧 Parents    - Approve or reject parent account registrations
+      📱 Devices     - Approve or reject child device pairing requests
+      ⚠️  Alerts      - View all AI-detected threat messages with risk scores
+      📋 Audit Logs  - Full history of all admin actions taken
+      ⚙️  Settings    - Change the admin account password
+
+
+================================================================================
+8. PART E: RUNNING THE PARENT MOBILE APP
+================================================================================
+
+  TERMINAL 3 — Start the Parent App:
+  ------------------------------------
+  Open another NEW PowerShell window and run:
+
+      cd "PATH_TO_YOUR_PROJECT\parent-app"
+      npm run web       ← for browser testing
+      npm run android   ← for Android device/emulator (requires Android Studio)
+      npm start         ← to scan QR code with Expo Go mobile app
+
+  The parent app allows parents to:
+      - Register and create an account
+      - Wait for admin approval
+      - Register their child's device using a pairing code
+      - View alerts detected on their child's device
+      - Mark alerts as resolved
+
+
+================================================================================
+9. PART F: STOPPING THE SYSTEM
+================================================================================
+
+  To stop the Admin Dashboard:
+      Press Ctrl + C in the dashboard terminal
+
+  To stop the Backend Server:
+      Press Ctrl + C in the docker terminal, then run:
+          docker compose down
+
+  To stop and clean up ALL Docker containers completely:
+      docker compose down --volumes --remove-orphans
+
+
+================================================================================
+10. ONLINE DATABASE (RENDER) INFORMATION
+================================================================================
+
+  The system uses a PostgreSQL database hosted on Render.com.
+  This database is SHARED — it works from ANY laptop without any changes.
+
+  DATABASE DETAILS:
+  -----------------
+  Service Name:   guardian-edge-db
+  Host:           dpg-d8k1tlrjdbms739uv40g-a.oregon-postgres.render.com
+  Port:           5432
+  Database Name:  guardian_edge_db
+  Username:       guardian_edge_db_user
+  Region:         Oregon, USA
+
+  DASHBOARD URL:
+      https://dashboard.render.com
+
+  IMPORTANT NOTE:
+  Render free databases are automatically SUSPENDED after 90 days of inactivity.
+  If the database is suspended, log in to dashboard.render.com and click "Resume"
+  on the guardian-edge-db service.
+
+  DATABASE TABLES:
+  ----------------
+  users    - Stores admin and parent accounts
+  devices  - Stores child device registration records
+  alerts   - Stores AI-detected threat messages
+  logs     - Stores admin action audit history
+
+
+================================================================================
+11. DEFAULT ADMIN CREDENTIALS
+================================================================================
+
+  Username:  admin
+  Password:  admin123
+
+  ⚠️  IMPORTANT SECURITY NOTE:
+  Change the admin password immediately after first login on any new machine.
+  Go to the Admin Dashboard → Settings → Change Password.
+
+  If you forget the admin password, you can reset it by:
+  1. Connecting to the database using a PostgreSQL client (like DBeaver or
+     pgAdmin) with the credentials above.
+  2. Run this SQL query to reset it to "admin123":
+         UPDATE users
+         SET "passwordHash" = '$2a$10$ZXT9Ez6ZxrCJjAH4Vh0E5.b3AtKuTxZM8SQi1qFMBoQSj286HssZK'
+         WHERE username = 'admin';
+
+
+================================================================================
+12. TROUBLESHOOTING COMMON ERRORS
+================================================================================
+
+  ERROR: "EADDRINUSE: address already in use :::5050"
+  ----------------------------------------------------
+  CAUSE:  Port 5050 is already being used by another program.
+  FIX:    Run this in PowerShell to kill whatever is using the port:
+              Stop-Process -Id (Get-NetTCPConnection -LocalPort 5050).OwningProcess -Force
+          Then try again: docker compose up
+
+  ────────────────────────────────────────────────────────────
+  ERROR: "connect ECONNREFUSED 127.0.0.1:5432"
+  ─────────────────────────────────────────────────────────────
+  CAUSE:  The backend cannot find a database. This happens when the
+          DATABASE_URL is missing or wrong.
+  FIX:    Check that docker-compose.yml has the correct DATABASE_URL.
+          Refer to Section 10 above for the correct URL.
+
+  ────────────────────────────────────────────────────────────
+  ERROR: "The server does not support SSL connections"
+  ────────────────────────────────────────────────────────────
+  CAUSE:  The backend is trying to connect to the local Docker database
+          with SSL enabled.
+  FIX:    This was fixed in db.js. Make sure db.js has the conditional
+          SSL check. If not, rebuild: docker compose up --build
+
+  ────────────────────────────────────────────────────────────
+  ERROR: Docker build fails with hash mismatch
+  ────────────────────────────────────────────────────────────
+  CAUSE:  Network interruption during file download.
+  FIX:    Simply run the build again: docker compose up --build
+          It will retry the download.
+
+  ────────────────────────────────────────────────────────────
+  ERROR: "relation users does not exist"
+  ────────────────────────────────────────────────────────────
+  CAUSE:  The backend started before the database was fully ready.
+          The tables are then created a moment later (harmless warning).
+  FIX:    No action needed. The system self-corrects. If the error
+          persists, run: docker compose down && docker compose up
+
+  ────────────────────────────────────────────────────────────
+  ERROR: Dashboard shows blank page or "Open up App.js"
+  ────────────────────────────────────────────────────────────
+  CAUSE:  Old Expo cache or App.js is using the placeholder.
+  FIX:    Stop the server and run:
+              npx expo start --web --clear
+          in the dashboard folder.
+
+  ────────────────────────────────────────────────────────────
+  ERROR: Docker Desktop says "Docker Engine stopped"
+  ────────────────────────────────────────────────────────────
+  CAUSE:  Docker failed to start.
+  FIX:    Restart Docker Desktop. If the problem persists, restart
+          your computer and open Docker Desktop before running
+          any docker commands.
+
+
+================================================================================
+13. PROJECT FOLDER STRUCTURE
+================================================================================
+
+  AI-DRIVEN CHILD ONLINE PROTECTION SYSTEM\
+  │
+  ├── backend\                  ← Node.js API server
+  │   ├── server.js             ← Main Express API (all routes)
+  │   ├── db.js                 ← PostgreSQL database functions
+  │   ├── db.json               ← Legacy JSON database (not in use)
+  │   └── package.json          ← Node.js dependencies
+  │
+  ├── dashboard\                ← Admin web dashboard (React Native Web)
+  │   ├── App.js                ← Full admin UI (login, parents, devices, alerts)
+  │   ├── index.js              ← Expo entry point
+  │   └── package.json          ← Dashboard dependencies
+  │
+  ├── parent-app\               ← Parent mobile app (Expo/React Native)
+  │   ├── App.js                ← Full parent UI
+  │   └── package.json          ← Parent app dependencies
+  │
+  ├── child-app\                ← Child Android monitoring app
+  │   ├── App.js                ← Child app entry point
+  │   ├── android\              ← Native Android code
+  │   └── modules\
+  │       └── message-interceptor\  ← Kotlin accessibility service module
+  │
+  ├── infer.py                  ← Python AI inference script (called by backend)
+  ├── threat_model.tflite       ← TensorFlow Lite AI model (trained)
+  ├── threat_model.h5           ← Original Keras AI model
+  ├── vocabulary.json           ← Tokeniser vocabulary for the AI model
+  ├── train_model.py            ← Script used to train the AI model
+  ├── data_prep.py              ← Script used to prepare training data
+  ├── unified_dataset.csv       ← Combined training dataset
+  ├── requirements.txt          ← Python dependencies (tensorflow, numpy, etc.)
+  ├── Dockerfile                ← Docker image build instructions
+  ├── docker-compose.yml        ← Docker services configuration
+  ├── User Guide.txt            ← THIS FILE
+  └── README.md                 ← Project overview
+
+
+================================================================================
+  END OF USER GUIDE
+  For support, refer to the project README.md or contact the developer.
+================================================================================

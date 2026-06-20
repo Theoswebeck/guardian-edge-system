@@ -1,11 +1,15 @@
 const { Pool } = require('pg');
 
-const pool = new Pool({
+const poolConfig = {
   connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false
-  }
-});
+};
+
+// Render requires SSL, but the local Docker database doesn't support it
+if (process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('@db:5432') && !process.env.DATABASE_URL.includes('localhost')) {
+  poolConfig.ssl = { rejectUnauthorized: false };
+}
+
+const pool = new Pool(poolConfig);
 
 async function initDB() {
   const client = await pool.connect();
@@ -180,10 +184,11 @@ module.exports = {
   },
   getAlertsForParent: async (parentId) => {
     const res = await pool.query(`
-      SELECT a.* FROM alerts a
+      SELECT a.*, d.name as "deviceName" FROM alerts a
       JOIN devices d ON a."deviceId" = d.id
       WHERE d."parentId" = $1
-    `);
+      ORDER BY a.timestamp DESC
+    `, [parentId]);
     return res.rows;
   },
   addAlert: async (alert) => {
@@ -195,12 +200,14 @@ module.exports = {
     return res.rows[0];
   },
   resolveAlert: async (alertId, parentId) => {
-    const res = await pool.query(`
-      UPDATE alerts a
-      SET resolved = TRUE
-      FROM devices d
-      WHERE a."deviceId" = d.id AND d."parentId" = $1 AND a.id = $2
-    `, [parentId, alertId]);
+    const res = await pool.query(
+      `UPDATE alerts SET resolved = TRUE
+       WHERE id = $1
+       AND "deviceId" IN (
+         SELECT id FROM devices WHERE "parentId" = $2
+       )`,
+      [alertId, parentId]
+    );
     return res.rowCount > 0;
   }
 };

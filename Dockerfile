@@ -12,7 +12,7 @@ RUN ln -s /usr/bin/python3 /usr/bin/python
 
 # Install Python requirements
 COPY requirements.txt .
-RUN pip3 install --no-cache-dir -r requirements.txt
+RUN pip3 install --no-cache-dir --default-timeout=1000 -r requirements.txt
 
 # Copy ML model and scripts
 COPY infer.py .
