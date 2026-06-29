@@ -11,6 +11,10 @@ if (process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('@db:5432') &
 
 const pool = new Pool(poolConfig);
 
+pool.on('error', (err, client) => {
+  console.error('Unexpected error on idle client', err);
+});
+
 async function initDB() {
   const client = await pool.connect();
   try {

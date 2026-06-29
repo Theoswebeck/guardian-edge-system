@@ -1,0 +1,4 @@
+<resources>
+  <string name="app_name">child-app</string>
+  <string name="accessibility_service_description">GuardianEdge monitors chat messages to detect cyberbullying and grooming threats to protect your child.</string>
+</resources>

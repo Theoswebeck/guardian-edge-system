@@ -1,4 +1,5 @@
 require('dotenv').config();
+require('express-async-errors');
 const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
@@ -252,6 +253,11 @@ app.post('/api/analyze', (req, res) => {
 
 app.get('/health', (req, res) => {
   res.json({ status: 'healthy', time: new Date() });
+});
+
+app.use((err, req, res, next) => {
+  console.error('Unhandled Server Error:', err);
+  res.status(500).json({ error: 'Internal Server Error' });
 });
 
 app.listen(PORT, async () => {
