@@ -9,6 +9,7 @@ from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Embedding, Conv1D, GlobalAveragePooling1D, Dense, Dropout
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 
 # Reproducibility
 np.random.seed(42)
@@ -18,7 +19,7 @@ tf.random.set_seed(42)
 VOCAB_SIZE = 15000
 MAX_LEN = 50
 EMBEDDING_DIM = 64
-EPOCHS = 6
+EPOCHS = 50
 BATCH_SIZE = 64
 
 dataset_path = r"e:\Java Project\UK Project\2026\Benson\AI-DRIVEN CHILD ONLINE PROTECTION SYSTEM\unified_dataset.csv"
@@ -64,10 +65,10 @@ def main():
     print("Building lightweight CNN model...")
     model = Sequential([
         Embedding(input_dim=VOCAB_SIZE, output_dim=EMBEDDING_DIM, input_length=MAX_LEN),
-        Conv1D(filters=64, kernel_size=3, padding='same', activation='relu'),
+        Conv1D(filters=128, kernel_size=5, padding='same', activation='relu'),
         GlobalAveragePooling1D(),
         Dropout(0.5),
-        Dense(64, activation='relu'),
+        Dense(128, activation='relu'),
         Dropout(0.3),
         Dense(3, activation='softmax')
     ])
@@ -81,14 +82,45 @@ def main():
     model.summary()
     
     # Train
-    print("Training model...")
+    print("Training model with EarlyStopping...")
+    early_stop = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+    reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=3, min_lr=1e-5)
+    
     history = model.fit(
         X_train, y_train,
         validation_data=(X_val, y_val),
         epochs=EPOCHS,
         batch_size=BATCH_SIZE,
-        verbose=1
+        verbose=1,
+        callbacks=[early_stop, reduce_lr]
     )
+    
+    # Save training history graphs immediately
+    import matplotlib.pyplot as plt
+    import os
+    output_dir = r"C:\Users\RWB\.gemini\antigravity-ide\brain\066fe532-a5fe-4d81-bc64-4ea53543e99c\scratch"
+    
+    plt.figure(figsize=(10, 5))
+    plt.plot(history.history['accuracy'], label='Train Accuracy', color='blue', marker='o')
+    plt.plot(history.history['val_accuracy'], label='Validation Accuracy', color='orange', marker='o')
+    plt.title('Model Accuracy (Train vs Validation)')
+    plt.ylabel('Accuracy')
+    plt.xlabel('Epoch')
+    plt.legend(loc='lower right')
+    plt.grid(True)
+    plt.savefig(os.path.join(output_dir, 'training_accuracy.png'))
+    plt.close()
+
+    plt.figure(figsize=(10, 5))
+    plt.plot(history.history['loss'], label='Train Loss', color='red', marker='o')
+    plt.plot(history.history['val_loss'], label='Validation Loss', color='green', marker='o')
+    plt.title('Model Loss (Train vs Validation)')
+    plt.ylabel('Loss')
+    plt.xlabel('Epoch')
+    plt.legend(loc='upper right')
+    plt.grid(True)
+    plt.savefig(os.path.join(output_dir, 'training_loss.png'))
+    plt.close()
     
     # Evaluate
     print("\nEvaluating model...")
