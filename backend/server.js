@@ -219,36 +219,62 @@ app.post('/api/alerts/:id/resolve', authenticateToken, async (req, res) => {
 });
 
 // --- INFERENCE ---
-app.post('/api/analyze', (req, res) => {
-  try {
-    const { text } = req.body;
-    if (!text) return res.status(400).json({ error: 'Text required' });
+// Simple queue to prevent memory overload from concurrent Python processes
+const analyzeQueue = [];
+let isProcessingQueue = false;
 
+async function processAnalyzeQueue() {
+  if (isProcessingQueue || analyzeQueue.length === 0) return;
+  isProcessingQueue = true;
+  
+  const { text, req, res } = analyzeQueue.shift();
+  
+  try {
     const { execFile } = require('child_process');
     const path = require('path');
     const scriptPath = path.join(__dirname, '..', 'infer.py');
 
     execFile('python', [scriptPath, text], (error, stdout, stderr) => {
-      if (error) return res.status(500).json({ error: 'Inference execution failed' });
       try {
-        const lines = stdout.trim().split('\n');
-        const jsonLine = lines.find(line => line.trim().startsWith('{') && line.trim().endsWith('}'));
-        if (!jsonLine) return res.status(500).json({ error: 'No JSON output' });
-        
-        const result = JSON.parse(jsonLine.trim());
-        let riskScore = result.label === 0 ? Math.floor(result.confidence * 30) : Math.floor(30 + result.confidence * 70);
-        let riskLevel = riskScore > 80 ? 'Critical Risk' : riskScore > 60 ? 'High Risk' : riskScore > 30 ? 'Suspicious' : 'Safe';
-        
-        result.riskScore = riskScore;
-        result.riskLevel = riskLevel;
-        res.json(result);
+        if (error) {
+          res.status(500).json({ error: 'Inference execution failed' });
+        } else {
+          const lines = stdout.trim().split('\n');
+          const jsonLine = lines.find(line => line.trim().startsWith('{') && line.trim().endsWith('}'));
+          
+          if (!jsonLine) {
+            res.status(500).json({ error: 'No JSON output' });
+          } else {
+            const result = JSON.parse(jsonLine.trim());
+            let riskScore = result.label === 0 ? Math.floor(result.confidence * 30) : Math.floor(30 + result.confidence * 70);
+            let riskLevel = riskScore > 80 ? 'Critical Risk' : riskScore > 60 ? 'High Risk' : riskScore > 30 ? 'Suspicious' : 'Safe';
+            
+            result.riskScore = riskScore;
+            result.riskLevel = riskLevel;
+            res.json(result);
+          }
+        }
       } catch (err) {
         res.status(500).json({ error: 'Parser failed' });
+      } finally {
+        isProcessingQueue = false;
+        processAnalyzeQueue(); // Trigger next in queue
       }
     });
   } catch (err) {
     res.status(500).json({ error: 'Analysis failed' });
+    isProcessingQueue = false;
+    processAnalyzeQueue();
   }
+}
+
+app.post('/api/analyze', (req, res) => {
+  const { text } = req.body;
+  if (!text) return res.status(400).json({ error: 'Text required' });
+
+  // Add to queue and attempt to process
+  analyzeQueue.push({ text, req, res });
+  processAnalyzeQueue();
 });
 
 app.get('/health', (req, res) => {
