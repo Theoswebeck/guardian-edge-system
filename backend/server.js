@@ -247,6 +247,17 @@ async function processAnalyzeQueue() {
           } else {
             const result = JSON.parse(jsonLine.trim());
             let riskScore = result.label === 0 ? Math.floor(result.confidence * 30) : Math.floor(30 + result.confidence * 70);
+            
+            // --- AI Override: Catch explicit words that the model misses ---
+            const explicitKeywords = ["sex", "nude", "naked", "send pics", "horny", "masturbate", "porn", "sweetheart", "kiss", "visit me alone", "home alone", "send picture", "dirty secret"];
+            const lowerText = text.toLowerCase();
+            if (explicitKeywords.some(kw => lowerText.includes(kw))) {
+                result.label = 2; // Grooming
+                result.class = "Grooming";
+                riskScore = Math.max(riskScore, 95); // Ensure it's very high
+            }
+            // ---------------------------------------------------------------
+
             let riskLevel = riskScore > 80 ? 'Critical Risk' : riskScore > 60 ? 'High Risk' : riskScore > 30 ? 'Suspicious' : 'Safe';
             
             result.riskScore = riskScore;
