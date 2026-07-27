@@ -49,6 +49,21 @@ function authenticateToken(req, res, next) {
   });
 }
 
+function authenticateDeviceToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  if (!token) {
+    req.device = null;
+    return next();
+  }
+  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    if (!err && decoded && decoded.type === 'device') {
+      req.device = decoded;
+    }
+    next();
+  });
+}
+
 // --- AUTH ---
 app.post('/api/auth/register', async (req, res) => {
   try {
@@ -155,7 +170,7 @@ app.post('/api/devices', authenticateToken, async (req, res) => {
   try {
     const { name, childDOB } = req.body;
     if (!name || !childDOB) return res.status(400).json({ error: 'Missing fields' });
-    
+
     // Age check
     const birthDate = new Date(childDOB);
     const today = new Date();
@@ -184,16 +199,30 @@ app.get('/api/devices/:id/validate', async (req, res) => {
     if (!device) return res.status(404).json({ error: 'Invalid pairing code' });
     if (device.status === 'pending') return res.status(403).json({ error: 'Pending approval' });
     if (device.status === 'rejected') return res.status(403).json({ error: 'Rejected' });
-    res.json({ success: true, name: device.name });
+    const deviceToken = jwt.sign({ id: device.id, name: device.name, type: 'device' }, JWT_SECRET, { expiresIn: '365d' });
+    res.json({ success: true, name: device.name, deviceToken });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.post('/api/devices/:id/heartbeat', async (req, res) => {
+  try {
+    const updated = await db.updateDeviceHeartbeat(req.params.id);
+    if (updated) res.json({ success: true, timestamp: new Date() });
+    else res.status(404).json({ error: 'Device not found' });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
   }
 });
 
 // --- ALERTS ---
-app.post('/api/alerts', async (req, res) => {
+app.post('/api/alerts', authenticateDeviceToken, async (req, res) => {
   try {
     const { deviceId, threatType, text, score } = req.body;
+    if (req.device && req.device.id !== deviceId) {
+      return res.status(403).json({ error: 'Unauthorized device token' });
+    }
     const device = await db.getDeviceById(deviceId);
     if (!device) return res.status(404).json({ error: 'Device not found' });
 
@@ -226,9 +255,9 @@ let isProcessingQueue = false;
 async function processAnalyzeQueue() {
   if (isProcessingQueue || analyzeQueue.length === 0) return;
   isProcessingQueue = true;
-  
+
   const { text, req, res } = analyzeQueue.shift();
-  
+
   try {
     const { execFile } = require('child_process');
     const path = require('path');
@@ -241,25 +270,25 @@ async function processAnalyzeQueue() {
         } else {
           const lines = stdout.trim().split('\n');
           const jsonLine = lines.find(line => line.trim().startsWith('{') && line.trim().endsWith('}'));
-          
+
           if (!jsonLine) {
             res.status(500).json({ error: 'No JSON output' });
           } else {
             const result = JSON.parse(jsonLine.trim());
             let riskScore = result.label === 0 ? Math.floor(result.confidence * 30) : Math.floor(30 + result.confidence * 70);
-            
+
             // --- AI Override: Catch explicit words that the model misses ---
             const explicitKeywords = ["sex", "nude", "naked", "send pics", "horny", "masturbate", "porn", "sweetheart", "kiss", "visit me alone", "home alone", "send picture", "dirty secret"];
             const lowerText = text.toLowerCase();
             if (explicitKeywords.some(kw => lowerText.includes(kw))) {
-                result.label = 2; // Grooming
-                result.class = "Grooming";
-                riskScore = Math.max(riskScore, 95); // Ensure it's very high
+              result.label = 2; // Grooming
+              result.class = "Grooming";
+              riskScore = Math.max(riskScore, 95); // Ensure it's very high
             }
             // ---------------------------------------------------------------
 
             let riskLevel = riskScore > 80 ? 'Critical Risk' : riskScore > 60 ? 'High Risk' : riskScore > 30 ? 'Suspicious' : 'Safe';
-            
+
             result.riskScore = riskScore;
             result.riskLevel = riskLevel;
             res.json(result);
@@ -279,7 +308,7 @@ async function processAnalyzeQueue() {
   }
 }
 
-app.post('/api/analyze', (req, res) => {
+app.post('/api/analyze', authenticateDeviceToken, (req, res) => {
   const { text } = req.body;
   if (!text) return res.status(400).json({ error: 'Text required' });
 
@@ -299,7 +328,7 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
-  
+
   try {
     const users = await db.getUsers();
     if (!users.find(u => u.role === 'admin')) {
@@ -307,7 +336,7 @@ app.listen(PORT, async () => {
       await db.addUser({ username: 'admin', passwordHash, isAdmin: true });
       console.log('Default admin created.');
     }
-  } catch(e) {
+  } catch (e) {
     console.error("Warning: DB not ready yet for admin check", e);
   }
 });

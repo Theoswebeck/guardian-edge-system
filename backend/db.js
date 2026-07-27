@@ -33,7 +33,8 @@ async function initDB() {
         "childDOB" VARCHAR(255),
         "birthCertificate" TEXT,
         status VARCHAR(50) DEFAULT 'pending',
-        "registeredAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        "registeredAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        "lastHeartbeat" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
       CREATE TABLE IF NOT EXISTS alerts (
         id VARCHAR(255) PRIMARY KEY,
@@ -52,6 +53,11 @@ async function initDB() {
         timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
+    try {
+      await client.query('ALTER TABLE devices ADD COLUMN IF NOT EXISTS "lastHeartbeat" TIMESTAMP DEFAULT CURRENT_TIMESTAMP;');
+    } catch (e) {
+      // Column might already exist or sqlite syntax fallback
+    }
     console.log("Database tables initialized.");
   } catch (err) {
     console.error("Error initializing tables:", err);
@@ -159,6 +165,10 @@ module.exports = {
       return true;
     }
     return false;
+  },
+  updateDeviceHeartbeat: async (id) => {
+    const res = await pool.query('UPDATE devices SET "lastHeartbeat" = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *', [id]);
+    return res.rowCount > 0;
   },
 
   getAdminLogs: async () => {
