@@ -232,5 +232,17 @@ module.exports = {
       [alertId, parentId]
     );
     return res.rowCount > 0;
+  },
+  deleteAlert: async (alertId, parentId) => {
+    const res = await pool.query(
+      `DELETE FROM alerts
+       WHERE id = $1
+       AND "deviceId" IN (
+         SELECT id FROM devices WHERE "parentId" = $2
+       )`,
+      [alertId, parentId]
+    );
+    return res.rowCount > 0;
   }
 };
+

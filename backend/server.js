@@ -216,6 +216,21 @@ app.post('/api/devices/:id/heartbeat', async (req, res) => {
   }
 });
 
+// --- Helper: Filter out Android system notifications, downloads, APK files, carrier balance SMS ---
+function isSystemOrCarrierNoise(text) {
+  if (!text || typeof text !== 'string') return true;
+  const lower = text.toLowerCase();
+  const noisePatterns = [
+    "downloading document", "downloading file", "downloading video", "downloading image", "downloading photo",
+    "downloading audio", "downloading sticker", "downloading",
+    ".apk", ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".zip", ".rar", ".mp4", ".mp3", "📄", "📁", "📷", "📹", "🎵",
+    "check your balance", "dial *", "valid for 24", "valid for 7", "valid for 30", "mb valid", "gb valid",
+    "data bundle", "airtime", "you have received",
+    "items set to", "hd quality", "new message", "new messages", "checking for new message", "messages from"
+  ];
+  return noisePatterns.some(kw => lower.includes(kw));
+}
+
 // --- ALERTS ---
 app.post('/api/alerts', authenticateDeviceToken, async (req, res) => {
   try {
@@ -225,6 +240,10 @@ app.post('/api/alerts', authenticateDeviceToken, async (req, res) => {
     }
     const device = await db.getDeviceById(deviceId);
     if (!device) return res.status(404).json({ error: 'Device not found' });
+
+    if (isSystemOrCarrierNoise(text)) {
+      return res.status(200).json({ ignored: true, reason: 'System or carrier noise filtered out' });
+    }
 
     const existingAlert = await db.findRecentAlert(deviceId, text, 60);
     if (existingAlert) {
@@ -249,6 +268,11 @@ app.get('/api/alerts', authenticateToken, async (req, res) => {
 
 app.post('/api/alerts/:id/resolve', authenticateToken, async (req, res) => {
   if (await db.resolveAlert(req.params.id, req.user.id)) res.json({ message: 'Resolved' });
+  else res.status(404).json({ error: 'Not found' });
+});
+
+app.delete('/api/alerts/:id', authenticateToken, async (req, res) => {
+  if (await db.deleteAlert(req.params.id, req.user.id)) res.json({ message: 'Deleted' });
   else res.status(404).json({ error: 'Not found' });
 });
 
@@ -291,6 +315,14 @@ async function processAnalyzeQueue() {
               riskScore = Math.max(riskScore, 95); // Ensure it's very high
             }
             // ---------------------------------------------------------------
+
+            // --- System & Carrier Noise Filter: Exclude file downloads, attachments, carrier notifications ---
+            if (isSystemOrCarrierNoise(text)) {
+              result.label = 0; // Safe
+              result.class = "Safe";
+              riskScore = 0;
+            }
+            // -------------------------------------------------------------------------------------------------
 
             let riskLevel = riskScore > 80 ? 'Critical Risk' : riskScore > 60 ? 'High Risk' : riskScore > 30 ? 'Suspicious' : 'Safe';
 
