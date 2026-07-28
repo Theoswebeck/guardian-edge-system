@@ -226,6 +226,11 @@ app.post('/api/alerts', authenticateDeviceToken, async (req, res) => {
     const device = await db.getDeviceById(deviceId);
     if (!device) return res.status(404).json({ error: 'Device not found' });
 
+    const existingAlert = await db.findRecentAlert(deviceId, text, 60);
+    if (existingAlert) {
+      return res.status(200).json(existingAlert);
+    }
+
     const newAlert = await db.addAlert({
       deviceId, deviceName: device.name, threatType, text, score: parseFloat(score)
     });

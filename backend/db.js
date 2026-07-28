@@ -213,6 +213,15 @@ module.exports = {
     );
     return res.rows[0];
   },
+  findRecentAlert: async (deviceId, text, windowSeconds = 60) => {
+    const res = await pool.query(
+      `SELECT * FROM alerts 
+       WHERE "deviceId" = $1 AND text = $2 AND timestamp >= NOW() - INTERVAL '60 seconds' 
+       ORDER BY timestamp DESC LIMIT 1`,
+      [deviceId, text]
+    );
+    return res.rows[0];
+  },
   resolveAlert: async (alertId, parentId) => {
     const res = await pool.query(
       `UPDATE alerts SET resolved = TRUE
